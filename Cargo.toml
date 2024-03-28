@@ -6,5 +6,7 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+fbthrift-transport = "0.10.0"
 milvus-sdk-rust = "0.1.0"
 nebula-client = "0.7.3"
+tokio = "1.36.0"
