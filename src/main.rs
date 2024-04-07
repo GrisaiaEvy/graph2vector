@@ -1,12 +1,61 @@
+use fastembed::TextEmbedding;
 use graph2vector::graph_db::GraphDbFunc;
-use graph2vector::graph_db::nebula_graph_db::{NebulaGraph, NebulaGraphParams};
+use graph2vector::graph_db::neo4j_graph_db::{Neo4j, Neo4jParams};
 
-fn main() {
-    println!("ok");
-    // 先获取调用参数，检查参数
-    let obj = NebulaGraph::connect(
-        NebulaGraphParams{host: "127.0.0.1", port: 9661, user: "root", pwd: "nebula", db_name: "test"});
-    // 实例化三个服务、确认无报错
+#[derive(Debug, PartialEq)]
+pub struct Foo {
+    bar: String,
+}
 
-    // 依次调用三个服务、返回成功
+impl Foo {
+    pub fn builder() -> FooBuilder {
+        FooBuilder::default()
+    }
+}
+
+#[derive(Default)]
+pub struct FooBuilder {
+    bar: String,
+}
+
+impl FooBuilder {
+    pub fn new(/* ... */) -> FooBuilder {
+        FooBuilder {
+            bar: String::from("X")
+        }
+    }
+
+    pub fn name(mut self, bar: String) -> FooBuilder {
+        self.bar = bar;
+        self
+    }
+
+    pub fn builder(self) -> Foo {
+        Foo {
+            bar: self.bar
+        }
+    }
+}
+
+#[test]
+fn builder_test() {
+    let foo = Foo {
+        bar: String::from("Y")
+    };
+    let foo_builder = FooBuilder::new().name(String::from("Y")).builder();
+    assert_eq!(foo, foo_builder)
+}
+
+
+#[tokio::main]
+async fn main() {
+    println!("整体开始执行");
+    // let neo4j = Neo4j::connect(Neo4jParams{host: String::from("127.0.0.1"),
+    //     port: 7687, user: String::from("neo4j"), pwd: String::from("123456"), db_name: String::from("politics")});
+    // println!("获取图数据库实例");
+    // neo4j.await.vertexes().await;
+
+    // 创建策略 建造者模式
+    // Strategy.xxxStrategy().graph().vec().vecDb();
+
 }
