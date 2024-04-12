@@ -1,10 +1,13 @@
-use neo4rs::{Graph, Node, query};
+use neo4rs::{BoltType, Graph, Node, query, Relation};
 use tokio::time::Instant;
-use crate::graph_db::GraphDbFunc;
+use crate::graph_db::{EdgeData, GraphDbFunc, NodeData};
 
 pub struct Neo4j {
     graph: Graph,
     db_name: String
+}
+
+impl Neo4j {
 }
 
 pub struct Neo4jParams {
@@ -32,30 +35,64 @@ impl GraphDbFunc for Neo4j {
         Neo4j {graph, db_name: params.db_name}
     }
 
-    async fn vertexes(&self) {
+    async fn vertexes(&self) -> Vec<NodeData> {
         let graph = self.graph.clone();
         let db_name = self.db_name.clone();
-        println!("异步执行前");
-
-        let start_time = Instant::now();
-
-        // 在异步块中等待异步任务的完成
         tokio::spawn(async move {
+            let mut nodes: Vec<NodeData> = Vec::new();
             let mut result =
                 graph.execute_on(db_name.as_str(), query("match (n) return n")).await.unwrap();
-            println!("开始查询数据");
             while let Ok(Some(row)) = result.next().await {
                 let node: Node = row.get("n").unwrap();
-                println!("{:?}", node)
+                let mut node_data = NodeData::default();
+                node_data.id = node.id().to_string();
+                let first_label = node.labels().get(0)
+                    .map(|label| label.to_string())
+                    .unwrap_or_else(|| "无标签".to_string());
+                node_data.tag = first_label;
+
+                for (_, key) in node.keys().into_iter().enumerate() {
+                    let i = node.get::<BoltType>(key).expect("None property");
+                    let mut p_str = String::new();
+                    match i  {
+                        BoltType::String(val) => {
+                            p_str = val.value
+                        }
+                        BoltType::Integer(val) => {
+                            p_str = val.value.to_string()
+                        }
+                        _ => continue
+                    }
+                    node_data.properties.insert(key.to_string(), p_str);
+                }
+                nodes.push(node_data);
             }
-        }).await.expect("Failed to await async task");
-
-        let end_time = Instant::now();
-        println!("异步执行后");
-        println!("异步执行后，花费了{:?}", end_time - start_time);
+            nodes
+        }).await.expect("Failed to await async task")
     }
 
-    fn edges(&self) {
-        todo!()
+    async fn edges(&self) -> Vec<EdgeData> {
+        let graph = self.graph.clone();
+        let db_name = self.db_name.clone();
+
+        tokio::spawn(async move {
+            let mut edges: Vec<EdgeData> = Vec::new();
+            let mut result =
+                graph.execute_on(db_name.as_str(), query("match ()-[e]->() return e")).await.unwrap();
+
+            let mut edge_data = EdgeData::default();
+
+            while let Ok(Some(row)) = result.next().await {
+                let relation: Relation = row.get("e").unwrap();
+                edge_data.start_node_id = relation.start_node_id().to_string();
+                edge_data.end_node_id = relation.end_node_id().to_string();
+                edge_data.typ = relation.typ().to_string();
+                edges.push(edge_data);
+            }
+            edges
+        }).await.expect("Query edge failed")
     }
+
+
+
 }
