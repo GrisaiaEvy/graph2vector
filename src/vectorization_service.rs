@@ -1,10 +1,14 @@
-mod vector_cache;
-mod fastembed_service;
+use std::future::Future;
+use fastembed::Embedding;
+use crate::graph_db::NodeData;
+
+pub mod vector_cache;
+pub mod fastembed_service;
 
 pub trait VectorizationFunc {
 
-    async fn vectorize(sentences: Vec<String>) -> Vec<f64>;
+    async fn vectorize(&self, sentences: String) -> Embedding;
 
-    async fn vectorize_batch(sentences: Vec<String>) -> Vec<f64>;
+    async fn vectorize_batch(&self, sentences: Vec<String>) -> Vec<Embedding>;
 
 }

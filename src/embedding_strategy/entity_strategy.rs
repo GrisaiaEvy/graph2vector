@@ -19,9 +19,10 @@ impl<G: GraphDbFunc, V: VectorizationFunc, VDB: VectorDbFunc>  StrategyFunc for 
         if x.is_empty() {
             panic!("Data is empty!")
         }
-        let mut s = String::new();
+
         // tag p1=v1 p2=v2 ...
         for x in x.into_iter() {
+            let mut s = String::new();
             s.push_str(x.tag.as_str());
             s.push(' ');
             for (k, v) in x.properties {
@@ -31,16 +32,15 @@ impl<G: GraphDbFunc, V: VectorizationFunc, VDB: VectorDbFunc>  StrategyFunc for 
                 s.push(' ');
             }
 
+            // 分批调用向量化
+            let val = self.vectorize.vectorize(s);
+            // 分批插入数据库
+
         }
-
-        // 分批调用向量化
-
-        // 分批插入数据库
-        self.vectorize.
 
     }
 
     fn query(q: String) -> String {
-        todo!()
+
     }
 }

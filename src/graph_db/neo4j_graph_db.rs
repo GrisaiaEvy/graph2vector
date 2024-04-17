@@ -1,5 +1,4 @@
 use neo4rs::{BoltType, Graph, Node, query, Relation};
-use tokio::time::Instant;
 use crate::graph_db::{EdgeData, GraphDbFunc, NodeData};
 
 pub struct Neo4j {
@@ -80,9 +79,10 @@ impl GraphDbFunc for Neo4j {
             let mut result =
                 graph.execute_on(db_name.as_str(), query("match ()-[e]->() return e")).await.unwrap();
 
-            let mut edge_data = EdgeData::default();
+
 
             while let Ok(Some(row)) = result.next().await {
+                let mut edge_data = EdgeData::default();
                 let relation: Relation = row.get("e").unwrap();
                 edge_data.start_node_id = relation.start_node_id().to_string();
                 edge_data.end_node_id = relation.end_node_id().to_string();

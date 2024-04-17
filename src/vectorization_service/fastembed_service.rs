@@ -1,5 +1,4 @@
-use fastembed::TextEmbedding;
-use crate::vectorization_service::vector_cache::VectorCache;
+use fastembed::{Embedding, TextEmbedding};
 use crate::vectorization_service::VectorizationFunc;
 
 pub struct FastEmbed {
@@ -15,16 +14,15 @@ impl FastEmbed {
 impl VectorizationFunc for FastEmbed {
 
 
-    async fn vectorize(sentences: Vec<String>) -> Vec<f64> {
-        let model = TextEmbedding::try_new(Default::default()).unwrap();
-
-        let doc = vec!["hello world", "thats wired"];
-        let embeddings = model.embed(doc, None).unwrap();
-        print!("embedding: {:?}", embeddings)
-
+    async fn vectorize(&self, sentences: String) -> Embedding {
+        let vec1 = vec![sentences];
+        let batch
+            = self.vectorize_batch(vec1).await;
+        batch.into_iter().next().unwrap()
     }
 
-    async fn vectorize_batch(sentences: Vec<String>) -> Vec<f64> {
-        todo!()
+    async fn vectorize_batch(&self, sentences: Vec<String>) -> Vec<Embedding> {
+        let model = TextEmbedding::try_new(Default::default()).unwrap();
+        model.embed(sentences, None).expect("Vectorize failed!")
     }
 }
