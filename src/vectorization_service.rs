@@ -7,8 +7,8 @@ pub mod fastembed_service;
 
 pub trait VectorizationFunc {
 
-    async fn vectorize(&self, sentences: String) -> Embedding;
+    fn vectorize(&self, sentences: &str) -> impl Future<Output = Embedding>;
 
-    async fn vectorize_batch(&self, sentences: Vec<String>) -> Vec<Embedding>;
+    fn vectorize_batch(&self, sentences: Vec<&str>) -> impl Future<Output = Vec<Embedding>>;
 
 }

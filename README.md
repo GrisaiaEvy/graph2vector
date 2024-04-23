@@ -1,2 +1,9 @@
 # Nebula2Milvus
-An exchanger for nebula graph data to vector db milvus.
+An minimum common for nebula graph data to vector db milvus.
+## Introduction
+
+## Usage
+
+## Roadmap
+
+## Licence

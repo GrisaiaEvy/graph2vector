@@ -28,32 +28,35 @@ impl EdgeData {
 
 }
 
+pub type SPO = (String, String, String);
+
+#[derive(Debug)]
+pub struct GraphSchema {
+    spo_list: Vec<SPO>
+}
+
+impl GraphSchema {
+    pub fn format(&self) -> String {
+        let mut graph_schema_str = String::new();
+        for (subject, predicate, object) in self.spo_list.iter() {
+            let spo_str = format!("({}->{}->{})\n", subject, predicate, object);
+            graph_schema_str.push_str(&spo_str);
+        }
+        graph_schema_str
+    }
+}
+
 pub trait GraphDbFunc {
 
     type ConnParams;
 
-    fn connect(params: Self::ConnParams) -> impl std::future::Future<Output = Self> + Send where Self: Sized;
+    fn connect(params: Self::ConnParams) -> impl Future<Output = Self>;
 
     fn vertexes(&self) -> impl Future<Output = Vec<NodeData>>;
 
     fn edges(&self) -> impl Future<Output = Vec<EdgeData>>;
+
+    // [tag1 - edge1 - tag2, ...]
+    fn graph_schema(&self) -> impl Future<Output = GraphSchema>;
+
 }
-// enum DatabaseType {
-//     Neo4j,
-//     Nebula,
-// }
-
-
-// fn create_database(db_type: DatabaseType, connection_string: &str) -> Box<dyn GraphDbFunc> {
-//     match db_type {
-//         DatabaseType::Neo4j => Box::new( NebulaGraph{
-//             // connection_string: connection_string.to_string(),
-//         }),
-//         DatabaseType::Nebula => Box::new(GremlinDatabase {
-//             connection_string: connection_string.to_string(),
-//             // 初始化Gremlin特有参数
-//         }),
-//         // 处理其他数据库类型
-//     }
-// }
-
