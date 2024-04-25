@@ -1,6 +1,7 @@
 use std::collections::HashMap;
+use std::error::Error;
 use std::future::Future;
-use neo4rs::{BoltList, BoltNode, BoltRelation, BoltType, Graph, Node, query, Relation};
+use neo4rs::{BoltList, BoltNode, BoltType, Graph, Node, query, Relation};
 use crate::graph_db::{EdgeData, GraphDbFunc, GraphSchema, NodeData, SPO};
 
 pub struct Neo4j {
@@ -111,7 +112,7 @@ impl GraphDbFunc for Neo4j {
                     _ => continue
                 }
             }
-            let mut relationships: BoltList = row.get("relationships").expect("fetch r\
+            let relationships: BoltList = row.get("relationships").expect("fetch r\
             elations failed");
             for r in relationships.into_iter() {
                 match r {
@@ -129,5 +130,12 @@ impl GraphDbFunc for Neo4j {
             }
         }
         GraphSchema { spo_list }
+    }
+
+    async fn subgraph(&self, id: &str) -> impl Future<Output=Result<String, Box<dyn Error>>> {
+        let cypher = "MATCH ()<-[r]->(m) WHERE ID(n) = {id} RETURN relations r,m".replace("{id}", id);
+        let mut result =
+            self.graph.execute_on(self.db_name.as_str(), query(cypher.as_str())).await?;
+
     }
 }

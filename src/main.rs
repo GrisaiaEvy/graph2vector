@@ -9,7 +9,7 @@ use std::{env, io};
 use std::io::Write;
 use config::{Config, ConfigBuilder, File};
 use lazy_static::lazy_static;
-use log::{debug, log};
+use log::{info};
 use graph2vector::config::RUST_LOG;
 use graph2vector::llm::LLM;
 use graph2vector::llm::open_ai::OpenAi;
@@ -62,14 +62,11 @@ async fn main() {
     env::set_var("RUST_LOG", RUST_LOG.as_str());
     env_logger::init();
 
-    debug!("ok");
+    info!("begin");
     let neo4j = Neo4j::connect(Neo4jParams{host: String::from("127.0.0.1"),
         port: 11003, user: String::from("neo4j"), pwd: String::from("123456"), db_name: String::from("politics")}).await;
-    let schema = neo4j.graph_schema().await;
-    let string = schema.format();
-    print!("{}", string);
-    // 换向量库
-    let embed = FastEmbed::new();
+
+    let embed = FastEmbed::new_zh();
 
     let milvus = Milvus::new(String::from("http://192.168.20.218:19530")).await.unwrap();
 
@@ -78,7 +75,7 @@ async fn main() {
                          String::from("gpt-3.5-turbo"), 0.1);
 
     let strategy = StrategyBuilder::new(neo4j, embed, milvus, ai).build_entity_strategy();
-    strategy.load_data().await;
+    // strategy.load_data().await;
 
     strategy.launch_ai_cmd().await;
 }

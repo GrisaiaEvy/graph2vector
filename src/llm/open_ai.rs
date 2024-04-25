@@ -1,3 +1,4 @@
+use std::error::Error;
 use std::io::{stdout, Write};
 use async_openai::Client;
 use async_openai::config::{Config, OpenAIConfig};
@@ -44,7 +45,7 @@ impl OpenAi {
 
 impl LLM for OpenAi {
 
-    async fn completion(&self, system_prompt: &str, user_prompt: &str) -> String {
+    async fn completion(&self, system_prompt: &str, user_prompt: &str) -> Result<String, Box<dyn Error>> {
         let client = self.client();
         let request = self.request(system_prompt, user_prompt);
 
@@ -57,9 +58,9 @@ impl LLM for OpenAi {
                 "{}: Role: {}  Content: {:?}",
                 choice.index, choice.message.role, choice.message.content
             );
-            result.push_str(choice.message.content.expect("fetch ").as_str())
+            result.push_str(choice.message.content.expect("fetch content failed").as_str())
         }
-        result
+        Ok(result)
     }
 
     fn stream_completion(&self, system_prompt: &str, user_prompt: &str) {
@@ -73,6 +74,7 @@ impl LLM for OpenAi {
         let mut stream = client.chat().create_stream(request).await.expect("fetch llm stream error");
 
         let mut lock = stdout().lock();
+        write!(lock, "{}", "AI response: ").unwrap();
         while let Some(result) = stream.next().await {
             match result {
                 Ok(response) => {
@@ -88,5 +90,6 @@ impl LLM for OpenAi {
             }
             stdout().flush().expect("flush error");
         }
+        writeln!(lock, "").unwrap();
     }
 }

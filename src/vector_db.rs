@@ -1,7 +1,19 @@
+use std::error::Error;
 use std::future::Future;
-use fastembed::Embedding;
 
 pub mod milvus_vector_db;
+
+#[derive(Default, Debug)]
+pub struct VectorSearchResult {
+    id: String,
+    content: String,
+    metadata: String,
+    score: f32
+}
+
+impl VectorSearchResult {
+
+}
 
 pub trait VectorDbFunc {
 
@@ -15,8 +27,8 @@ pub trait VectorDbFunc {
 
     const METADATA_FIELD: &'static str = "metadata";
 
-    fn insert(&self, id: String, content: String, vector: Vec<f32>, metadata: String) -> impl Future<Output = ()>;
+    fn insert(&self, id: String, content: String, vector: Vec<f32>, metadata: String) -> impl Future<Output = Result<(), Box<dyn Error>>>;
 
-    fn search(&self, vector: Vec<f32>, top_k: i32) -> impl Future<Output = String>;
+    fn search(&self, vector: Vec<f32>, top_k: i32) -> impl Future<Output = Result<Vec<VectorSearchResult>, Box<dyn Error>>>;
 
 }

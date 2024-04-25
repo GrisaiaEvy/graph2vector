@@ -1,4 +1,5 @@
-use log::debug;
+use std::error::Error;
+use log::{debug, info};
 use crate::config::CONF;
 use crate::embedding_strategy::StrategyFunc;
 use crate::graph_db::GraphDbFunc;
@@ -35,7 +36,7 @@ impl<G: GraphDbFunc, V: VectorizationFunc, VDB: VectorDbFunc, M: LLM>  EntityStr
 }
 
 impl<G: GraphDbFunc, V: VectorizationFunc, VDB: VectorDbFunc, M: LLM> StrategyFunc for EntityStrategy<G, V, VDB, M>  {
-    async fn load_data(&self) {
+    async fn load_data(&self) -> Result<(), Box<dyn Error>> {
         let x = self.graph.vertexes().await;
         if x.is_empty() {
             panic!("Data is empty!")
@@ -53,41 +54,47 @@ impl<G: GraphDbFunc, V: VectorizationFunc, VDB: VectorDbFunc, M: LLM> StrategyFu
                 s.push(' ');
             }
 
-            let embedding = self.vectorize.vectorize(&s).await;
+            let embedding = self.vectorize.vectorize(&s).await?;
 
-            self.vector_db.insert(x.id, s, embedding, String::new()).await;
+            self.vector_db.insert(x.id, s, embedding, String::new()).await?;
             cnt += 1;
             debug!("插入了{}条数据", cnt);
         }
+        Ok(())
     }
 
 
-    async fn build_query_context(&self, input: &str) -> String {
+    async fn build_query_context(&self, input: &str) -> Result<String, Box<dyn Error>> {
         let graph_schema = self.graph.graph_schema().await;
         let graph_schema_str = graph_schema.format();
 
         let extract_prompt = Self::extract_prompt(graph_schema_str.as_str());
         debug!("extract_prompt：{}", extract_prompt);
 
-        let result = self.llm.completion(extract_prompt.as_str(), input).await;
-        let entity_list: Vec<String> = serde_json::from_str(result.as_str()).expect("format result failed");
+        let result = self.llm.completion(extract_prompt.as_str(), input).await?;
+        let entity_list: Vec<String> = serde_json::from_str(result.as_str())?;
         debug!("extract entities [{:?}]", entity_list);
 
         let mut context = String::new();
         for x in entity_list.into_iter() {
-            let vec = self.vectorize.vectorize(input).await;
-            self.vector_db.search(vec, 6).await;
+            let vec = self.vectorize.vectorize(input).await?;
+            let vector_search_results = self.vector_db.search(vec, 6).await?;
+            println!("{:?}", vector_search_results);
+            self.graph.graph_schema()
+
         }
-        Self::user_prompt(graph_schema_str.as_str(), context.as_str(), input)
+        Ok(Self::user_prompt(graph_schema_str.as_str(), context.as_str(), input))
     }
 
-    fn system_prompt(&self) -> String {
-        String::from("Please follow this schema and extract entity form users query")
+    fn system_prompt(&self) -> Result<String, Box<dyn Error>> {
+        Ok(CONF.get_string("system_prompt")?)
     }
 
-    async fn query(&self, input: &str) {
-        let user_prompt = self.build_query_context(input).await;
-        let system_prompt = self.system_prompt();
+    async fn query(&self, input: &str) -> Result<(), Box<dyn Error>> {
+        let system_prompt = self.system_prompt()?;
+        let user_prompt = self.build_query_context(input).await?;
+        info!("user prompt: {}", user_prompt);
         self.llm.stream_completion_cmd(system_prompt.as_str(), user_prompt.as_str()).await;
+        Ok(())
     }
 }

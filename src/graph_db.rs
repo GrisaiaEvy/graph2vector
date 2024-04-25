@@ -1,6 +1,6 @@
 use std::collections::HashMap;
+use std::error::Error;
 use std::future::Future;
-use neo4rs::BoltType;
 
 #[allow(unused)]
 pub mod nebula_graph_db;
@@ -58,5 +58,7 @@ pub trait GraphDbFunc {
 
     // [tag1 - edge1 - tag2, ...]
     fn graph_schema(&self) -> impl Future<Output = GraphSchema>;
+
+    fn subgraph(&self, id: &str) -> impl Future<Output = Result<String, Box<dyn Error>>>;
 
 }

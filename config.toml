@@ -1,4 +1,4 @@
-RUST_LOG = "debug"
+RUST_LOG = "graph2vector=info"
 
 system_prompt = """
 As a professional expert in knowledge graphs, you will answer user questions using the known content of knowledge graph, remember follow the rule below:

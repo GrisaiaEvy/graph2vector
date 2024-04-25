@@ -1,7 +1,7 @@
+use std::error::Error;
 use std::future::Future;
 use std::io;
 use std::io::Write;
-use log::debug;
 use crate::embedding_strategy::entity_strategy::EntityStrategy;
 use crate::graph_db::GraphDbFunc;
 use crate::llm::LLM;
@@ -12,26 +12,34 @@ mod entity_strategy;
 
 pub trait StrategyFunc {
 
-    fn load_data(&self) -> impl Future<Output = ()>;
+    fn load_data(&self) -> impl Future<Output=Result<(), Box<dyn Error>>>;
 
-    fn build_query_context(&self, input: &str) -> impl Future<Output = String>;
+    fn build_query_context(&self, input: &str) -> impl Future<Output = Result<String, Box<dyn Error>>>;
 
-    fn system_prompt(&self) -> String;
+    fn system_prompt(&self) -> Result<String, Box<dyn Error>>;
 
-    fn query(&self, input: &str) -> impl Future<Output = ()>;
+    fn query(&self, input: &str) -> impl Future<Output = Result<(), Box<dyn Error>>>;
 
     async fn launch_ai_cmd(&self) {
         loop {
-            debug!("Please input your question：");
-            io::stdout().flush().unwrap();
+            println!("Please input your question:");
+
+            if let Err(e) = io::stdout().flush() {
+                eprintln!("Filed to flush stdout: {}", e);
+                return;
+            }
 
             let mut input = String::new();
-            io::stdin().read_line(&mut input).expect("read failed");
+            if let Err(e) = io::stdin().read_line(&mut input) {
+                eprintln!("Failed to get input, please try again. Error: {}", e);
+            }
             let input = input.trim();
 
-            self.query(input).await;
+            if input == "quit" || input == "exit" { break; }
 
-            if input == "quit" { break; }
+            if let Err(e) = self.query(input).await {
+                eprintln!("Query failed: {}", e);
+            }
         }
     }
 
