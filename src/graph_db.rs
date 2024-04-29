@@ -15,13 +15,26 @@ pub struct NodeData {
 
 impl NodeData {
 
+    // tag p1=v1 p2=v2 ...
+    pub fn format(&self) -> String {
+        let mut s = String::new();
+        s.push_str(self.tag.as_str());
+        s.push(' ');
+        for (k, v) in self.properties.iter() {
+            s.push_str(k);
+            s.push('=');
+            s.push_str(v);
+            s.push(' ');
+        }
+        s
+    }
 }
 
 #[derive(Default, Debug)]
 pub struct EdgeData {
-    start_node_id: String,
-    end_node_id: String,
-    typ: String,
+    pub start_node_id: String,
+    pub end_node_id: String,
+    pub typ: String,
 }
 
 impl EdgeData {

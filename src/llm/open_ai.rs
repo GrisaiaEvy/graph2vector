@@ -49,15 +49,12 @@ impl LLM for OpenAi {
         let client = self.client();
         let request = self.request(system_prompt, user_prompt);
 
-        let response = client.chat().create(request).await.expect("fetch llm response error");
+        let response = client.chat().create(request).await?;
 
         let mut result = String::new();
 
         for choice in response.choices {
-            println!(
-                "{}: Role: {}  Content: {:?}",
-                choice.index, choice.message.role, choice.message.content
-            );
+
             result.push_str(choice.message.content.expect("fetch content failed").as_str())
         }
         Ok(result)

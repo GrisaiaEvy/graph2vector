@@ -72,7 +72,7 @@ async fn main() {
 
     let ai = OpenAi::new(String::from("https://api.chatanywhere.tech"),
                          String::from("sk-dQUpensJ2gGWe3xaPabG6T4KQfDGYNTfaSEXwUVqN88jii99"),
-                         String::from("gpt-3.5-turbo"), 0.1);
+                         String::from("gpt-3.5-turbo"), 0.5);
 
     let strategy = StrategyBuilder::new(neo4j, embed, milvus, ai).build_entity_strategy();
     // strategy.load_data().await;

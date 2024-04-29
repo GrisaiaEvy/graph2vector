@@ -84,7 +84,6 @@ impl VectorDbFunc for Milvus {
         let result = self.collection.search(value, Self::VECTOR_FIELD, top_k, MetricType::L2,
                                           [Self::CONTENT_FIELD, Self::METADATA_FIELD], &option)
             .await?;
-        println!("result size {}", result.len());
         let mut vec_result = vec![];
         for r in result.into_iter() {
             for i in 0..r.size {

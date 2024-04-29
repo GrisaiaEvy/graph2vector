@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::error::Error;
 use log::{debug, info};
 use crate::config::CONF;
@@ -36,9 +37,31 @@ impl<G: GraphDbFunc, V: VectorizationFunc, VDB: VectorDbFunc, M: LLM>  EntityStr
 
     async fn subgraph_prompt(&self, start_node_id: &str, start_node_content: &str) -> Result<String, Box<dyn Error>> {
         let subgraph_list = self.graph.subgraph(start_node_id).await?;
-        // 处理数据
-        println!("子图：{:?}", subgraph_list);
-        Ok(String::new())
+        let mut prompt = String::new();
+
+        let mut hash_map: HashMap<String, String> = HashMap::new();
+        let vec_node = subgraph_list.0;
+        for n in vec_node.iter() {
+            if !n.id.is_empty() {
+                hash_map.insert(n.id.clone(), n.format());
+            }
+        }
+        let vec_edge = subgraph_list.1;
+        for e in vec_edge.into_iter() {
+            if e.start_node_id == start_node_id {
+                if let Some(r) = hash_map.get(&e.end_node_id) {
+                    prompt.push_str(format!("{} -> {} -> {}", &start_node_content, &e.typ, r).as_str());
+                }
+            } else if e.end_node_id == start_node_id {
+                if let Some(r) = hash_map.get(&e.start_node_id) {
+                    prompt.push_str(format!("{} -> {} -> {}", r, &e.typ, &start_node_content).as_str());
+                }
+            } else {
+                continue;
+            }
+            prompt.push_str("\n");
+        }
+        Ok(prompt)
     }
 }
 
@@ -49,22 +72,12 @@ impl<G: GraphDbFunc, V: VectorizationFunc, VDB: VectorDbFunc, M: LLM> StrategyFu
             panic!("Data is empty!")
         }
         let mut cnt = 0;
-        // tag p1=v1 p2=v2 ...
-        // node data的tostring
-        for x in x.into_iter() {
-            let mut s = String::new();
-            s.push_str(x.tag.as_str());
-            s.push(' ');
-            for (k, v) in x.properties {
-                s.push_str(k.as_str());
-                s.push('=');
-                s.push_str(v.as_str());
-                s.push(' ');
-            }
 
+        for x in x.iter() {
+            let s = x.format();
             let embedding = self.vectorize.vectorize(&s).await?;
 
-            self.vector_db.insert(x.id, s, embedding, String::new()).await?;
+            self.vector_db.insert(x.id.clone(), s, embedding, String::new()).await?;
             cnt += 1;
             debug!("插入了{}条数据", cnt);
         }
@@ -86,10 +99,10 @@ impl<G: GraphDbFunc, V: VectorizationFunc, VDB: VectorDbFunc, M: LLM> StrategyFu
         let mut context = String::new();
         for x in entity_list.into_iter() {
             let vec = self.vectorize.vectorize(input).await?;
-            let vector_search_results = self.vector_db.search(vec, 6).await?;
-            println!("{:?}", vector_search_results);
+            let vector_search_results =
+                self.vector_db.search(vec, CONF.get("top_k").unwrap_or(1)).await?;
             for x in vector_search_results.iter() {
-                self.subgraph_prompt(x.id.as_str(), x.content.as_str()).await?;
+                context.push_str(&self.subgraph_prompt(x.id.as_str(), x.content.as_str()).await?);
             }
         }
         Ok(Self::user_prompt(graph_schema_str.as_str(), context.as_str(), input))

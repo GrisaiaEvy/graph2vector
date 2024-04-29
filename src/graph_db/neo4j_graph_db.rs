@@ -80,27 +80,6 @@ impl GraphDbFunc for Neo4j {
             self.graph.execute_on( self.db_name.as_str(), query("match (n) return n")).await.unwrap();
         while let Ok(Some(row)) = result.next().await {
             let node: BoltNode = row.get("n").unwrap();
-            // let mut node_data = NodeData::default();
-            // node_data.id = node.id().to_string();
-            // let first_label = node.labels().get(0)
-            //     .map(|label| label.to_string())
-            //     .unwrap_or_else(|| "无标签".to_string());
-            // node_data.tag = first_label;
-            //
-            // for (_, key) in node.keys().into_iter().enumerate() {
-            //     let i = node.get::<BoltType>(key).expect("None property");
-            //     let mut p_str = String::new();
-            //     match i  {
-            //         BoltType::String(val) => {
-            //             p_str = val.value
-            //         }
-            //         BoltType::Integer(val) => {
-            //             p_str = val.value.to_string()
-            //         }
-            //         _ => continue
-            //     }
-            //     node_data.properties.insert(key.to_string(), p_str);
-            // }
             match Self::parse_bolt_node(node) {
                 Ok(n) => {
                     nodes.push(n);
