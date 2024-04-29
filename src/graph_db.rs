@@ -59,6 +59,6 @@ pub trait GraphDbFunc {
     // [tag1 - edge1 - tag2, ...]
     fn graph_schema(&self) -> impl Future<Output = GraphSchema>;
 
-    fn subgraph(&self, id: &str) -> impl Future<Output = Result<String, Box<dyn Error>>>;
+    fn subgraph(&self, id: &str) -> impl Future<Output = Result<(Vec<NodeData>, Vec<EdgeData>), Box<dyn Error>>>;
 
 }

@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::error::Error;
 use std::future::Future;
-use neo4rs::{BoltList, BoltNode, BoltType, Graph, Node, query, Relation};
+use neo4rs::{BoltList, BoltNode, BoltRelation, BoltType, Graph, Node, query, Relation};
 use crate::graph_db::{EdgeData, GraphDbFunc, GraphSchema, NodeData, SPO};
 
 pub struct Neo4j {
@@ -11,12 +11,42 @@ pub struct Neo4j {
 
 impl Neo4j {
 
-    fn parse_bolt_node(n: BoltNode) -> (String, String) {
+    fn parse_bolt_node_id_label(n: BoltNode) -> (String, String) {
         let id = n.id.value.to_string();
         let first_label = n.labels.value.get(0)
             .map(|label| label.to_string())
             .unwrap_or_else(|| "none".to_string());
         (id, first_label)
+    }
+
+    fn parse_bolt_node(n: BoltNode) -> Result<NodeData, Box<dyn Error>> {
+        let mut node_data = NodeData::default();
+        for (_, key) in n.properties.value.keys().into_iter().enumerate() {
+            let i = n.get::<BoltType>(key.value.as_str()).expect("None property");
+            let mut p_str = String::new();
+            match i  {
+                BoltType::String(val) => {
+                    p_str = val.value
+                }
+                BoltType::Integer(val) => {
+                    p_str = val.value.to_string()
+                }
+                _ => continue
+            }
+            node_data.properties.insert(key.to_string(), p_str);
+        }
+        let (id, label) = Self::parse_bolt_node_id_label(n);
+        node_data.id = id;
+        node_data.tag = label;
+        Ok(node_data)
+    }
+
+    fn parse_bolt_edge(e: BoltRelation) -> Result<EdgeData, Box<dyn Error>> {
+        let mut edge_data = EdgeData::default();
+        edge_data.start_node_id = e.start_node_id.value.to_string();
+        edge_data.end_node_id = e.end_node_id.value.to_string();
+        edge_data.typ = e.typ.value;
+        Ok(edge_data)
     }
 
 }
@@ -38,9 +68,7 @@ impl GraphDbFunc for Neo4j {
         let port: u16 = params.port;
         let user = params.user;
         let pwd = params.pwd;
-
         let uri = format!("{host}:{port}");
-
         let graph = Graph::new(uri, user, pwd).await.unwrap();
 
         Neo4j {graph, db_name: params.db_name}
@@ -51,29 +79,36 @@ impl GraphDbFunc for Neo4j {
         let mut result =
             self.graph.execute_on( self.db_name.as_str(), query("match (n) return n")).await.unwrap();
         while let Ok(Some(row)) = result.next().await {
-            let node: Node = row.get("n").unwrap();
-            let mut node_data = NodeData::default();
-            node_data.id = node.id().to_string();
-            let first_label = node.labels().get(0)
-                .map(|label| label.to_string())
-                .unwrap_or_else(|| "无标签".to_string());
-            node_data.tag = first_label;
-
-            for (_, key) in node.keys().into_iter().enumerate() {
-                let i = node.get::<BoltType>(key).expect("None property");
-                let mut p_str = String::new();
-                match i  {
-                    BoltType::String(val) => {
-                        p_str = val.value
-                    }
-                    BoltType::Integer(val) => {
-                        p_str = val.value.to_string()
-                    }
-                    _ => continue
+            let node: BoltNode = row.get("n").unwrap();
+            // let mut node_data = NodeData::default();
+            // node_data.id = node.id().to_string();
+            // let first_label = node.labels().get(0)
+            //     .map(|label| label.to_string())
+            //     .unwrap_or_else(|| "无标签".to_string());
+            // node_data.tag = first_label;
+            //
+            // for (_, key) in node.keys().into_iter().enumerate() {
+            //     let i = node.get::<BoltType>(key).expect("None property");
+            //     let mut p_str = String::new();
+            //     match i  {
+            //         BoltType::String(val) => {
+            //             p_str = val.value
+            //         }
+            //         BoltType::Integer(val) => {
+            //             p_str = val.value.to_string()
+            //         }
+            //         _ => continue
+            //     }
+            //     node_data.properties.insert(key.to_string(), p_str);
+            // }
+            match Self::parse_bolt_node(node) {
+                Ok(n) => {
+                    nodes.push(n);
                 }
-                node_data.properties.insert(key.to_string(), p_str);
+                Err(err) => {
+                    eprintln!("Format node failed：{}", err)
+                }
             }
-            nodes.push(node_data);
         }
         nodes
     }
@@ -84,12 +119,16 @@ impl GraphDbFunc for Neo4j {
             self.graph.execute_on(self.db_name.as_str(), query("match ()-[e]->() return e")).await.unwrap();
 
         while let Ok(Some(row)) = result.next().await {
-            let mut edge_data = EdgeData::default();
-            let relation: Relation = row.get("e").unwrap();
-            edge_data.start_node_id = relation.start_node_id().to_string();
-            edge_data.end_node_id = relation.end_node_id().to_string();
-            edge_data.typ = relation.typ().to_string();
-            edges.push(edge_data);
+            let relation: BoltRelation = row.get("e").unwrap();
+            match Self::parse_bolt_edge(relation) {
+                Ok(e) => {
+                    edges.push(e);
+                }
+                Err(err) => {
+                    eprintln!("Format edge failed：{}", err)
+                }
+            }
+
         }
         edges
     }
@@ -106,7 +145,7 @@ impl GraphDbFunc for Neo4j {
             for n in nodes.into_iter() {
                 match n {
                     BoltType::Node(val)=> {
-                        let (id, label) = Self::parse_bolt_node(val);
+                        let (id, label) = Self::parse_bolt_node_id_label(val);
                         id_node.insert(id, label);
                     }
                     _ => continue
@@ -132,10 +171,23 @@ impl GraphDbFunc for Neo4j {
         GraphSchema { spo_list }
     }
 
-    async fn subgraph(&self, id: &str) -> impl Future<Output=Result<String, Box<dyn Error>>> {
-        let cypher = "MATCH ()<-[r]->(m) WHERE ID(n) = {id} RETURN relations r,m".replace("{id}", id);
+    async fn subgraph(&self, id: &str) -> Result<(Vec<NodeData>, Vec<EdgeData>), Box<dyn Error>> {
+        let cypher = "MATCH (n)<-[r]->(m) WHERE ID(n) = {id} RETURN r,m".replace("{id}", id);
         let mut result =
             self.graph.execute_on(self.db_name.as_str(), query(cypher.as_str())).await?;
+        let mut node_list = vec![];
+        let mut edge_list = vec![];
 
+        while let Ok(Some(row)) = result.next().await {
+            // n 自己的信息
+            // n代号 r m 这里只需要r m
+            if let Ok(m) = Self::parse_bolt_node(row.get("m")?) {
+                node_list.push(m);
+            }
+            if let Ok(e) = Self::parse_bolt_edge(row.get("r")?) {
+                edge_list.push(e);
+            }
+        }
+        Ok((node_list, edge_list))
     }
 }

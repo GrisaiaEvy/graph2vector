@@ -5,10 +5,10 @@ pub mod milvus_vector_db;
 
 #[derive(Default, Debug)]
 pub struct VectorSearchResult {
-    id: String,
-    content: String,
-    metadata: String,
-    score: f32
+    pub id: String,
+    pub content: String,
+    pub metadata: String,
+    pub score: f32
 }
 
 impl VectorSearchResult {

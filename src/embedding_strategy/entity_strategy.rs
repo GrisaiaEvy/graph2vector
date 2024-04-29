@@ -33,6 +33,13 @@ impl<G: GraphDbFunc, V: VectorizationFunc, VDB: VectorDbFunc, M: LLM>  EntityStr
         let query_prompt = CONF.get_string("entity_user_prompt").expect("failed get user prompt");
         query_prompt.replace("{schema}", graph_schema_str).replace("{context}", context).replace("{question}", question)
     }
+
+    async fn subgraph_prompt(&self, start_node_id: &str, start_node_content: &str) -> Result<String, Box<dyn Error>> {
+        let subgraph_list = self.graph.subgraph(start_node_id).await?;
+        // 处理数据
+        println!("子图：{:?}", subgraph_list);
+        Ok(String::new())
+    }
 }
 
 impl<G: GraphDbFunc, V: VectorizationFunc, VDB: VectorDbFunc, M: LLM> StrategyFunc for EntityStrategy<G, V, VDB, M>  {
@@ -43,6 +50,7 @@ impl<G: GraphDbFunc, V: VectorizationFunc, VDB: VectorDbFunc, M: LLM> StrategyFu
         }
         let mut cnt = 0;
         // tag p1=v1 p2=v2 ...
+        // node data的tostring
         for x in x.into_iter() {
             let mut s = String::new();
             s.push_str(x.tag.as_str());
@@ -80,8 +88,9 @@ impl<G: GraphDbFunc, V: VectorizationFunc, VDB: VectorDbFunc, M: LLM> StrategyFu
             let vec = self.vectorize.vectorize(input).await?;
             let vector_search_results = self.vector_db.search(vec, 6).await?;
             println!("{:?}", vector_search_results);
-            self.graph.graph_schema()
-
+            for x in vector_search_results.iter() {
+                self.subgraph_prompt(x.id.as_str(), x.content.as_str()).await?;
+            }
         }
         Ok(Self::user_prompt(graph_schema_str.as_str(), context.as_str(), input))
     }
