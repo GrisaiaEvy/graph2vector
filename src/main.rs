@@ -64,14 +64,14 @@ async fn main() {
 
     info!("begin");
     let neo4j = Neo4j::connect(Neo4jParams{host: String::from("127.0.0.1"),
-        port: 11003, user: String::from("neo4j"), pwd: String::from("123456"), db_name: String::from("politics")}).await;
+        port: 11003, user: String::from("neo4j"), pwd: String::from("123456"), db_name: String::from("***")}).await;
 
     let embed = FastEmbed::new_zh();
 
-    let milvus = Milvus::new(String::from("http://192.168.20.218:19530")).await.unwrap();
+    let milvus = Milvus::new(String::from("http://127.0.0.1:19530")).await.unwrap();
 
-    let ai = OpenAi::new(String::from("https://api.chatanywhere.tech"),
-                         String::from("sk-dQUpensJ2gGWe3xaPabG6T4KQfDGYNTfaSEXwUVqN88jii99"),
+    let ai = OpenAi::new(String::from("https://***"),
+                         String::from("****"),
                          String::from("gpt-3.5-turbo"), 0.5);
 
     let strategy = StrategyBuilder::new(neo4j, embed, milvus, ai).build_entity_strategy();
