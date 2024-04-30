@@ -48,10 +48,10 @@ impl Milvus {
 
         let collection: Collection;
         if !exists {
-            debug!("向量集合不存在，开始新建");
+            debug!("Building a new vector collection");
             collection = client.create_collection(schema.clone(), None).await?;
         } else {
-            debug!("使用已有向量集合");
+            debug!("Using an exist vector collection");
             collection = client.get_collection(Self::SCHEMA_NAME).await?;
         }
         collection.load_partition_list().await?;

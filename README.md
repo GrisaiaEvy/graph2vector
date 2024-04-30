@@ -4,6 +4,7 @@ A program designed to convert knowledge graph data into vector representations.
 
 ## Introduction
 Graph2Vector serves as a bridge between knowledge graph data and vectorized representations, enabling LLM-based RAG question-answering functionality.
+![img_1.png](img_1.png)
 
 ## Usage
 1. **Download** the source code: `git clone https://github.com/GrisaiaEvy/graph2vector.git`

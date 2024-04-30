@@ -1218,6 +1218,7 @@ dependencies = [
  "milvus-sdk-rust",
  "nebula-client",
  "neo4rs",
+ "serde",
  "serde_json",
  "tokio",
 ]

@@ -79,7 +79,7 @@ impl<G: GraphDbFunc, V: VectorizationFunc, VDB: VectorDbFunc, M: LLM> StrategyFu
 
             self.vector_db.insert(x.id.clone(), s, embedding, String::new()).await?;
             cnt += 1;
-            debug!("插入了{}条数据", cnt);
+            debug!("Insert data count: {}", cnt);
         }
         Ok(())
     }

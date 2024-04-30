@@ -15,7 +15,7 @@
 //     pub pwd: String,
 //     pub db_name: String,
 // }
-// // 从文件读取，或者仔细研究下文档
+
 // impl GraphDbFunc for NebulaGraph {
 //
 //     type ConnParams = NebulaGraphParams;
