@@ -24,7 +24,7 @@ Graph2Vector serves as a bridge between knowledge graph data and vectorized repr
 ![img.png](img.png)
 
 ## Roadmap
-- [ ] **Add BM25 Support**: Implement support for BM25, a ranking function used in RAG retrieval.
+- [ ] **Add Reranker Support**
 - [ ] **Enhance Graph Database Support**
 - [ ] **Enhance Embedding Models Support**
 
